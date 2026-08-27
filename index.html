@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0e2a52">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>理财管家 · 银行卡理财收益管理</title>
+<script>
+/* SECTION: theme-bootstrap */
+(function () {
+  var mode = 'auto';
+  try {
+    var saved = localStorage.getItem('wealth-manager-theme');
+    if (saved === 'auto' || saved === 'light' || saved === 'dark') mode = saved;
+  } catch (e) {}
+  var theme = mode;
+  if (mode === 'auto') {
+    theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  }
+  if (theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  else document.documentElement.removeAttribute('data-theme');
+  document.documentElement.setAttribute('data-theme-mode', mode);
+})();
+</script>
+<style>
+/* SECTION: base */
+:root{
+  --navy:#0e2a52; --navy2:#143a6b; --navy3:#1c4a86;
+  --gold:#d4a94e; --gold2:#f0c36d; --gold-soft:#faf3e3;
+  --bg:#ffffff; --card:#ffffff; --line:#e3e9f2;
+  --txt:#1d2b3f; --txt2:#5c6b82; --txt3:#8fa0b8;
+  --green:#1d9e6f; --red:#d9534f;
+  --radius:14px;
+  --shadow:0 2px 12px rgba(16,42,82,.10),0 1px 3px rgba(16,42,82,.06);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;}
+body{
+  font-family:"PingFang SC","Microsoft YaHei","Segoe UI",system-ui,-apple-system,sans-serif;
+  background:var(--bg); color:var(--txt); min-height:100vh;
+  display:flex; flex-direction:column;
+}
+button{font-family:inherit;cursor:pointer;border:none;}
+input,select{font-family:inherit;font-size:14px;color:var(--txt);}
+
+/* SECTION: header */
+header{
+  background:linear-gradient(120deg,var(--navy) 0%,var(--navy2) 55%,var(--navy3) 100%);
+  color:#fff; padding:20px 24px 22px;
+  border-bottom:3px solid var(--gold);
+}
+.head-inner{max-width:1180px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+.brand{display:flex;align-items:center;gap:12px;}
+.brand-logo{
+  width:42px;height:42px;border-radius:11px;flex:none;
+  background:linear-gradient(135deg,var(--gold) 0%,var(--gold2) 100%);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 3px 10px rgba(212,169,78,.4);
+}
+.brand h1{font-size:22px;font-weight:700;letter-spacing:1px;}
+.brand .sub{font-size:12px;color:#c9d6ea;font-weight:400;margin-left:8px;letter-spacing:2px;}
+.head-right{display:flex;align-items:center;gap:10px;}
+.head-date{font-size:13px;color:#c9d6ea;background:rgba(255,255,255,.1);padding:7px 14px;border-radius:20px;}
+.theme-btn{
+  display:inline-flex;align-items:center;gap:7px;
+  background:rgba(255,255,255,.12);color:#eef3fb;border:1px solid rgba(255,255,255,.25);
+  border-radius:20px;padding:7px 14px;font-size:13px;font-weight:600;transition:all .18s;
+}
+.theme-btn:hover{background:rgba(255,255,255,.22);}
+/* 三态图标：默认只显示跟随系统图标 */
+.theme-btn .icon-auto,
+.theme-btn .icon-sun,
+.theme-btn .icon-moon{display:none;}
+.theme-btn .icon-auto{display:inline-block;}
+/* 浅色模式：显示太阳图标 */
+html[data-theme-mode="light"] .theme-btn .icon-auto{display:none;}
+html[data-theme-mode="light"] .theme-btn .icon-sun{display:inline-block;}
+/* 深色模式：显示月亮图标 */
+html[data-theme-mode="dark"] .theme-btn .icon-auto{display:none;}
+html[data-theme-mode="dark"] .theme-btn .icon-moon{display:inline-block;}
+
+/* SECTION: layout */
+main{max-width:1180px;margin:0 auto;width:100%;padding:22px 24px 10px;flex:1;}
+.layout{display:grid;grid-template-columns:390px 1fr;gap:18px;align-items:start;}
+.col{display:flex;flex-direction:column;gap:18px;min-width:0;}
+
+/* SECTION: stats */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;}
+.stat-card{
+  background:var(--card);border-radius:var(--radius);padding:16px 18px;
+  box-shadow:var(--shadow);border-top:3px solid var(--navy2);position:relative;overflow:hidden;
+}
+.stat-card.gold{border-top-color:var(--gold);}
+.stat-card .label{font-size:13px;color:var(--txt2);display:flex;align-items:center;gap:6px;}
+.stat-card .value{font-size:26px;font-weight:700;margin-top:8px;color:var(--navy);letter-spacing:.5px;word-break:break-all;}
+.stat-card.gold .value{color:#b8862f;}
+.stat-card .hint{font-size:11px;color:var(--txt3);margin-top:6px;}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--navy3);flex:none;}
+.dot.g{background:var(--gold);}
+
+/* SECTION: panel */
+.panel{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.panel-head h2{font-size:16px;color:var(--navy);display:flex;align-items:center;gap:8px;}
+.panel-head h2::before{content:"";width:4px;height:16px;border-radius:2px;background:var(--gold);display:inline-block;}
+
+/* SECTION: buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  border-radius:9px;padding:9px 16px;font-size:14px;font-weight:600;transition:all .15s;
+}
+.btn-gold{background:linear-gradient(135deg,var(--gold) 0%,var(--gold2) 100%);color:#4a3308;}
+.btn-gold:hover{filter:brightness(1.06);transform:translateY(-1px);}
+.btn-navy{background:var(--navy2);color:#fff;}
+.btn-navy:hover{background:var(--navy3);}
+.btn-ghost{background:#eef2f8;color:var(--navy2);}
+.btn-ghost:hover{background:#e2e9f4;}
+.btn-sm{padding:5px 11px;font-size:12px;border-radius:7px;}
+.icon-btn{background:#f1f4f9;color:var(--txt2);width:30px;height:30px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;transition:all .15s;flex:none;}
+.icon-btn:hover{background:#e4ebf5;color:var(--navy);}
+.icon-btn.danger:hover{background:#fdecea;color:var(--red);}
+
+/* SECTION: card list */
+.card-list{list-style:none;display:flex;flex-direction:column;gap:10px;}
+.bank-card{
+  border:1px solid var(--line);border-radius:12px;padding:13px 14px;
+  background:linear-gradient(135deg,#fbfcfe 0%,#f5f8fc 100%);
+  display:flex;align-items:center;gap:12px;transition:box-shadow .15s;
+}
+.bank-card:hover{box-shadow:0 3px 12px rgba(16,42,82,.1);}
+.bank-avatar{
+  width:44px;height:44px;border-radius:10px;flex:none;color:#fff;font-weight:700;font-size:13px;
+  background:linear-gradient(135deg,var(--navy2),var(--navy3));
+  display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.1;padding:2px;
+}
+.bank-info{flex:1;min-width:0;}
+.bank-name{font-size:15px;font-weight:700;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bank-meta{font-size:12px;color:var(--txt2);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap;}
+.bank-meta b{color:var(--txt);font-weight:600;}
+.bank-rate{font-size:12px;margin-top:4px;color:var(--txt3);}
+.bank-rate b.up{color:var(--green);}
+.bank-rate b.down{color:var(--red);}
+.bank-actions{display:flex;gap:6px;flex:none;}
+.empty-tip{
+  border:1.5px dashed var(--line);border-radius:12px;padding:26px 16px;text-align:center;color:var(--txt3);font-size:13px;line-height:1.8;
+}
+
+/* SECTION: form */
+.form-grid{display:flex;flex-direction:column;gap:12px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.field label{display:block;font-size:12px;color:var(--txt2);margin-bottom:5px;font-weight:600;}
+.field input,.field select{
+  width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:#fbfcfe;outline:none;transition:border .15s;
+}
+.field input:focus,.field select:focus{border-color:var(--gold);}
+.field .unit-wrap{position:relative;}
+.field .unit-wrap input{padding-right:34px;}
+.field .unit{position:absolute;right:11px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--txt3);}
+
+/* SECTION: chart */
+.scope-select{border:1px solid var(--line);border-radius:9px;padding:7px 10px;background:#fbfcfe;outline:none;max-width:220px;}
+.chart-wrap{position:relative;}
+#chartSvg{width:100%;height:auto;display:block;}
+.chart-empty{padding:46px 16px;text-align:center;color:var(--txt3);font-size:13px;line-height:1.9;}
+.chart-tooltip{
+  position:absolute;pointer-events:none;background:var(--navy);color:#fff;font-size:12px;
+  padding:8px 11px;border-radius:8px;box-shadow:0 4px 14px rgba(10,30,60,.3);
+  opacity:0;transition:opacity .12s;white-space:nowrap;z-index:5;line-height:1.6;
+}
+.chart-stats{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;}
+.chip{
+  flex:1;min-width:130px;background:var(--gold-soft);border:1px solid #efe0bd;border-radius:10px;padding:10px 13px;
+}
+.chip .k{font-size:12px;color:#8a6d2f;}
+.chip .v{font-size:19px;font-weight:700;color:#a3742a;margin-top:3px;}
+.chip.blue{background:#eef4fb;border-color:#d5e2f2;}
+.chip.blue .k{color:#4a6285;}
+.chip.blue .v{color:var(--navy2);}
+
+/* SECTION: table */
+.table-wrap{overflow-x:auto;}
+table.detail{width:100%;border-collapse:collapse;font-size:13px;min-width:520px;}
+table.detail th{
+  text-align:left;color:var(--txt2);font-weight:600;font-size:12px;
+  padding:9px 10px;border-bottom:2px solid var(--line);background:#f8fafd;white-space:nowrap;
+}
+table.detail td{padding:9px 10px;border-bottom:1px solid #edf1f7;white-space:nowrap;}
+table.detail tr:hover td{background:#f8fafd;}
+td .rate.up{color:var(--green);font-weight:600;}
+td .rate.down{color:var(--red);font-weight:600;}
+td .amt{font-weight:600;color:var(--navy);}
+
+/* SECTION: modal */
+.modal-mask{
+  position:fixed;inset:0;background:rgba(14,32,60,.5);display:none;
+  align-items:center;justify-content:center;z-index:50;padding:20px;
+}
+.modal-mask.show{display:flex;}
+.modal{
+  background:#fff;border-radius:16px;width:100%;max-width:420px;padding:22px;
+  box-shadow:0 16px 50px rgba(10,30,60,.3);animation:pop .18s ease;
+}
+@keyframes pop{from{transform:scale(.95);opacity:0;}to{transform:scale(1);opacity:1;}}
+.modal h3{font-size:17px;color:var(--navy);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.modal h3::before{content:"";width:4px;height:16px;border-radius:2px;background:var(--gold);}
+.modal-btns{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;}
+
+/* SECTION: toast */
+.toast{
+  position:fixed;left:50%;bottom:34px;transform:translateX(-50%) translateY(20px);
+  background:var(--navy);color:#fff;font-size:13px;padding:11px 20px;border-radius:24px;
+  box-shadow:0 6px 20px rgba(10,30,60,.35);opacity:0;pointer-events:none;transition:all .25s;z-index:99;
+  max-width:86vw;text-align:center;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* SECTION: footer */
+footer{
+  max-width:1180px;margin:0 auto;width:100%;padding:14px 24px 26px;
+  color:var(--txt3);font-size:12px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;
+}
+footer a{color:var(--navy2);cursor:pointer;text-decoration:underline dotted;}
+
+/* SECTION: responsive */
+/* 平板适配 */
+@media (max-width:960px){
+  .layout{grid-template-columns:1fr;}
+  .stats-row{grid-template-columns:repeat(2,1fr);}
+  .brand .sub{display:none;}
+}
+
+/* 手机适配 */
+@media (max-width:560px){
+  /* 安全区适配（刘海屏/全面屏） */
+  header{
+    padding:calc(14px + env(safe-area-inset-top)) 14px 14px;
+  }
+  main{padding:14px 12px 4px;}
+  footer{
+    padding:12px 16px calc(18px + env(safe-area-inset-bottom));
+    flex-direction:column;gap:8px;text-align:center;font-size:11px;
+  }
+
+  /* 头部紧凑布局 */
+  .brand h1{font-size:18px;}
+  .brand .sub{display:none;}
+  .brand-logo{width:36px;height:36px;border-radius:9px;}
+  .brand-logo svg{width:20px;height:20px;}
+  .head-right{gap:8px;}
+  .head-date{display:none;}
+  .theme-btn{padding:9px 13px;font-size:13px;min-height:38px;}
+  .theme-btn svg{width:15px;height:15px;}
+
+  /* 统计卡片 2x2 */
+  .stats-row{grid-template-columns:1fr 1fr;gap:10px;}
+  .stat-card{padding:13px 14px;}
+  .stat-card .label{font-size:12px;}
+  .stat-card .value{font-size:19px;word-break:break-all;}
+  .stat-card .hint{font-size:10.5px;line-height:1.5;}
+
+  /* 表单：输入框 ≥16px 防止 iOS 聚焦时页面缩放 */
+  .form-row{grid-template-columns:1fr;}
+  .field label{font-size:13px;}
+  .field input,.field select{
+    font-size:16px;padding:12px 13px;min-height:46px;
+    border-radius:10px;
+  }
+  .btn{padding:13px 18px;font-size:15px;min-height:46px;border-radius:11px;}
+  .btn-sm{padding:10px 14px;font-size:14px;min-height:40px;}
+
+  /* 银行卡列表 */
+  .bank-card{padding:12px;gap:10px;}
+  .bank-avatar{width:42px;height:42px;border-radius:9px;font-size:12px;}
+  .bank-name{font-size:15px;}
+  .bank-meta{font-size:12px;margin-top:4px;}
+  .bank-rate{font-size:12px;}
+  .bank-actions{gap:8px;}
+  .icon-btn{width:40px;height:40px;border-radius:10px;font-size:16px;}
+
+  /* 明细表格横向滚动 */
+  .table-wrap{
+    overflow-x:auto;-webkit-overflow-scrolling:touch;
+    margin:0 -18px;padding:0 18px;
+  }
+  table.detail{min-width:540px;}
+  table.detail th,table.detail td{padding:10px 10px;font-size:13px;}
+  table.detail .icon-btn{width:34px;height:34px;}
+
+  /* 图表全宽 */
+  .panel{padding:16px 14px;}
+  .chart-wrap{margin:0 -6px;}
+  .scope-select{max-width:100%;width:100%;font-size:15px;padding:10px 12px;min-height:42px;}
+  .chart-stats{gap:8px;}
+  .chip{min-width:calc(50% - 4px);padding:9px 11px;}
+  .chip .v{font-size:16px;}
+
+  /* 弹窗改为底部抽屉 */
+  .modal-mask{padding:0;align-items:flex-end;}
+  .modal{
+    max-width:none;width:100%;border-radius:18px 18px 0 0;
+    padding:20px 18px calc(18px + env(safe-area-inset-bottom));
+    animation:sheetUp .22s ease;
+  }
+  @keyframes sheetUp{from{transform:translateY(40px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+  .modal h3{font-size:16px;}
+  .modal-btns{flex-direction:column-reverse;gap:9px;}
+  .modal-btns .btn{width:100%;min-height:46px;}
+}
+
+/* 超小屏幕（360px 以下） */
+@media (max-width:360px){
+  .stats-row{grid-template-columns:1fr;}
+  .stat-card .value{font-size:18px;}
+  .brand h1{font-size:16px;}
+}
+
+/* SECTION: dark theme */
+html[data-theme="dark"]{
+  --navy:#0d1626; --navy2:#182440; --navy3:#243456;
+  --gold:#d4a94e; --gold2:#f0c36d; --gold-soft:#2b2415;
+  --bg:#0b1120; --card:#141e33; --line:#24304a;
+  --txt:#e7edf6; --txt2:#a8b6cc; --txt3:#6d7d96;
+  --shadow:0 2px 12px rgba(0,0,0,.4);
+}
+html[data-theme="dark"] header{
+  background:linear-gradient(120deg,#0a0f1c 0%,#101a30 55%,#16223c 100%);
+  border-bottom-color:#8a6d2f;
+}
+html[data-theme="dark"] .head-date{color:#9fb0ca;background:rgba(255,255,255,.06);}
+html[data-theme="dark"] .stat-card,
+html[data-theme="dark"] .panel{background:var(--card);border:1px solid var(--line);}
+html[data-theme="dark"] .stat-card{border-top:3px solid var(--navy3);}
+html[data-theme="dark"] .stat-card.gold{border-top-color:var(--gold);}
+html[data-theme="dark"] .stat-card .value{color:#e7edf6;}
+html[data-theme="dark"] .stat-card.gold .value{color:var(--gold2);}
+html[data-theme="dark"] .bank-card{
+  background:linear-gradient(135deg,#182440 0%,#141e33 100%);border-color:var(--line);
+}
+html[data-theme="dark"] .bank-card:hover{box-shadow:0 3px 14px rgba(0,0,0,.5);}
+html[data-theme="dark"] .bank-name{color:#e7edf6;}
+html[data-theme="dark"] .bank-meta b{color:#e7edf6;}
+html[data-theme="dark"] .empty-tip{border-color:var(--line);color:var(--txt3);background:rgba(255,255,255,.02);}
+html[data-theme="dark"] .field input,
+html[data-theme="dark"] .field select,
+html[data-theme="dark"] .scope-select{
+  background:#0e1626;border-color:var(--line);color:var(--txt);
+}
+html[data-theme="dark"] .field input:focus,
+html[data-theme="dark"] .field select:focus{border-color:var(--gold);}
+html[data-theme="dark"] .btn-ghost{background:#1c2842;color:#a8b6cc;}
+html[data-theme="dark"] .btn-ghost:hover{background:#243456;}
+html[data-theme="dark"] .icon-btn{background:#1c2842;color:#a8b6cc;}
+html[data-theme="dark"] .icon-btn:hover{background:#243456;color:#e7edf6;}
+html[data-theme="dark"] .icon-btn.danger:hover{background:#3a2230;color:#e58a86;}
+html[data-theme="dark"] table.detail th{background:#101a30;color:var(--txt2);border-bottom-color:var(--line);}
+html[data-theme="dark"] table.detail td{border-bottom-color:#1c2842;}
+html[data-theme="dark"] table.detail tr:hover td{background:#101a30;}
+html[data-theme="dark"] td .amt{color:#e7edf6;}
+html[data-theme="dark"] .chip{background:#2b2415;border-color:#3d3216;}
+html[data-theme="dark"] .chip .k{color:#a08647;}
+html[data-theme="dark"] .chip .v{color:var(--gold2);}
+html[data-theme="dark"] .chip.blue{background:#101a30;border-color:#1e2c48;}
+html[data-theme="dark"] .chip.blue .k{color:#7a8db0;}
+html[data-theme="dark"] .chip.blue .v{color:#9fc0ee;}
+html[data-theme="dark"] .modal{background:var(--card);border:1px solid var(--line);}
+html[data-theme="dark"] .modal h3{color:#e7edf6;}
+html[data-theme="dark"] .chart-tooltip{background:#0a0f1c;border:1px solid var(--line);}
+html[data-theme="dark"] footer{color:var(--txt3);}
+html[data-theme="dark"] footer a{color:var(--gold2);}
+</style>
+</head>
+<body>
+
+<!-- SECTION: header -->
+<header>
+  <div class="head-inner">
+    <div class="brand">
+      <div class="brand-logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M3 17L8.5 11.5L12.5 14.5L21 5.5" stroke="#4a3308" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M15.5 5.5H21V11" stroke="#4a3308" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M3 21H21" stroke="#4a3308" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h1>理财管家<span class="sub">WEALTH MANAGER</span></h1>
+    </div>
+    <div class="head-right">
+      <div class="head-date" id="headDate"></div>
+      <button class="theme-btn" id="themeToggle" title="切换皮肤：跟随系统 / 浅色 / 深色">
+        <svg class="icon-auto" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+          <path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/>
+        </svg>
+        <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"/>
+          <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M20 13.5A8.5 8.5 0 0 1 10.5 4 8.5 8.5 0 1 0 20 13.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        </svg>
+        <span id="themeLabel">跟随系统</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- SECTION: stats -->
+  <section class="stats-row" aria-label="资产总览">
+    <div class="stat-card">
+      <div class="label"><span class="dot"></span>理财总金额</div>
+      <div class="value" id="statTotal">--</div>
+      <div class="hint">全部银行卡在理财本金合计</div>
+    </div>
+    <div class="stat-card">
+      <div class="label"><span class="dot"></span>本月收益</div>
+      <div class="value" id="statMonth">--</div>
+      <div class="hint" id="statMonthHint">当月全部卡片收益合计</div>
+    </div>
+    <div class="stat-card gold">
+      <div class="label"><span class="dot g"></span>截止当前月年化收益率</div>
+      <div class="value" id="statYtd">--</div>
+      <div class="hint">累计收益 ÷ 本金 ÷ 已记月数 × 12</div>
+    </div>
+    <div class="stat-card gold">
+      <div class="label"><span class="dot g"></span>预测全年年化收益率</div>
+      <div class="value" id="statForecast">--</div>
+      <div class="hint">按月度收益趋势线性外推至全年</div>
+    </div>
+  </section>
+
+  <div class="layout">
+    <!-- SECTION: left column -->
+    <div class="col">
+      <section class="panel" aria-label="银行卡管理">
+        <div class="panel-head">
+          <h2>银行卡管理</h2>
+          <button class="btn btn-gold btn-sm" id="btnAddCard" data-primary-action>＋ 添加银行卡</button>
+        </div>
+        <ul class="card-list" id="cardList"></ul>
+      </section>
+
+      <section class="panel" aria-label="收益录入">
+        <div class="panel-head"><h2>收益录入</h2></div>
+        <form class="form-grid" id="incomeForm">
+          <div class="field">
+            <label for="inCard">选择银行卡</label>
+            <select id="inCard" required></select>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="inMonth">收益月份</label>
+              <input type="month" id="inMonth" required>
+            </div>
+            <div class="field">
+              <label for="inAmount">当月收益</label>
+              <div class="unit-wrap">
+                <input type="number" id="inAmount" step="0.01" placeholder="如 320.50" required>
+                <span class="unit">元</span>
+              </div>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-navy" data-primary-action>保存收益记录</button>
+        </form>
+      </section>
+    </div>
+
+    <!-- SECTION: right column -->
+    <div class="col">
+      <section class="panel" aria-label="收益率趋势">
+        <div class="panel-head">
+          <h2>收益率趋势</h2>
+          <select class="scope-select" id="chartScope" aria-label="选择查看范围"></select>
+        </div>
+        <div class="chart-wrap" id="chartWrap">
+          <svg id="chartSvg" viewBox="0 0 800 340" role="img" aria-label="月度收益率折线图"></svg>
+          <div class="chart-tooltip" id="chartTip"></div>
+          <div class="chart-empty" id="chartEmpty" style="display:none;"></div>
+        </div>
+        <div class="chart-stats" id="chartStats"></div>
+      </section>
+
+      <section class="panel" aria-label="收益明细">
+        <div class="panel-head"><h2>收益明细</h2><span style="font-size:12px;color:var(--txt3);" id="detailCount"></span></div>
+        <div class="table-wrap">
+          <table class="detail">
+            <thead>
+              <tr><th>月份</th><th>银行卡</th><th>收益（元）</th><th>本金（元）</th><th>月收益率</th><th>操作</th></tr>
+            </thead>
+            <tbody id="detailBody"></tbody>
+          </table>
+        </div>
+        <div class="empty-tip" id="detailEmpty" style="display:none;">暂无收益记录，请先在左侧录入某张卡某个月的收益。</div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<!-- SECTION: footer -->
+<footer>
+  <span>数据保存在当前浏览器本地，清除浏览器数据前请注意备份。</span>
+  <a id="resetSeed">清空全部数据</a>
+</footer>
+
+<!-- SECTION: card modal -->
+<div class="modal-mask" id="cardModal">
+  <div class="modal">
+    <h3 id="cardModalTitle">添加银行卡</h3>
+    <form class="form-grid" id="cardForm">
+      <input type="hidden" id="cardId">
+      <div class="field">
+        <label for="cardName">卡片名称</label>
+        <input type="text" id="cardName" maxlength="20" placeholder="如：工行稳健理财" required>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label for="cardBank">银行</label>
+          <input type="text" id="cardBank" maxlength="12" placeholder="如：工商银行">
+        </div>
+        <div class="field">
+          <label for="cardPrincipal">理财总金额</label>
+          <div class="unit-wrap">
+            <input type="number" id="cardPrincipal" step="0.01" min="0.01" placeholder="如 100000" required>
+            <span class="unit">元</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-btns">
+        <button type="button" class="btn btn-ghost" id="cardCancel">取消</button>
+        <button type="submit" class="btn btn-gold">保存</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script src="assets/app.js"></script>
+</body>
+</html>

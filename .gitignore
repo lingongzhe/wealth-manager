@@ -1,0 +1,4 @@
+# 历史版本备份，不需要上传
+history/
+# 应用构建器
+.apps-builder/

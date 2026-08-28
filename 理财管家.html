@@ -222,6 +222,7 @@ footer{
 }
 footer a{color:var(--navy2);cursor:pointer;text-decoration:underline dotted;}
 .footer-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;}
+.sync-status{color:var(--txt3);font-size:11px;}
 
 /* SECTION: responsive */
 /* 平板适配 */
@@ -502,6 +503,7 @@ html[data-theme="dark"] footer a{color:var(--gold2);}
 <footer>
   <span>数据保存在当前浏览器本地，清除浏览器数据前请注意备份。</span>
   <div class="footer-actions">
+    <span id="syncStatus" class="sync-status">☁ 同步中…</span>
     <button type="button" class="btn btn-ghost btn-sm" id="btnExport">⬇ 导出备份</button>
     <button type="button" class="btn btn-ghost btn-sm" id="btnImport">⬆ 导入恢复</button>
     <a id="resetSeed">清空全部数据</a>

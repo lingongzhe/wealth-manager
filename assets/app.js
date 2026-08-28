@@ -4,6 +4,14 @@
   'use strict';
 
   var LS_KEY = 'wealth-manager-data-v3';
+
+  // ---------- 云同步配置（JSONBin 免费云存储） ----------
+  var SYNC_BIN_ID = '6a90f0c4f5f4af5e294c1ad9';
+  var SYNC_ACCESS_KEY = '$2a$10$51yQIx6RuRm1Je.Yz56CleDbP37d7kvJyWefUMkFA6nfC7H4R8gc.';
+  var SYNC_API = 'https://api.jsonbin.io/v3/b/' + SYNC_BIN_ID;
+  var syncTimer = null;
+  var syncInFlight = false;
+  var lastLocalRaw = '';
   var $ = function (id) { return document.getElementById(id); };
 
   // ---------- 主题（跟随系统 / 浅色 / 深色） ----------
@@ -93,7 +101,7 @@
   }
 
   // ---------- 数据存取 ----------
-  var state = { cards: [], records: [], scope: 'all' };
+  var state = { cards: [], records: [], scope: 'all', updatedAt: 0 };
 
   // 内置示例卡片 ID（历史版本曾预置，现需自动清除）
   var SEED_CARD_IDS = ['c_icbc', 'c_cmb', 'c_citic'];
@@ -116,22 +124,32 @@
           }
           state.cards = cards;
           state.records = records;
+          state.updatedAt = (typeof obj.updatedAt === 'number') ? obj.updatedAt : 0;
+          lastLocalRaw = JSON.stringify({ cards: state.cards, records: state.records });
           if (cleaned) saveState();
           return;
         }
       }
     } catch (e) { /* 数据损坏时重置 */ }
-    var seed = seedData();
-    state.cards = seed.cards;
-    state.records = seed.records;
-    saveState();
+    state.cards = [];
+    state.records = [];
+    state.updatedAt = 0;
+    lastLocalRaw = '';
   }
   function saveState() {
+    var raw = JSON.stringify({ cards: state.cards, records: state.records });
+    if (raw === lastLocalRaw) {
+      if (!state.updatedAt) { state.updatedAt = Date.now(); }
+      return;
+    }
+    lastLocalRaw = raw;
+    state.updatedAt = Date.now();
     try {
-      localStorage.setItem(LS_KEY, JSON.stringify({ cards: state.cards, records: state.records }));
+      localStorage.setItem(LS_KEY, JSON.stringify({ cards: state.cards, records: state.records, updatedAt: state.updatedAt }));
     } catch (e) {
       toast('保存失败：浏览器本地存储不可用');
     }
+    scheduleSync();
   }
 
   // ---------- 导出 / 导入备份（跨设备迁移数据） ----------
@@ -175,6 +193,65 @@
       }
     };
     reader.readAsText(file);
+  }
+
+  // ---------- 云同步（JSONBin 免费云存储，自动同步电脑/手机数据） ----------
+  function setSyncStatus(txt) {
+    var el = document.getElementById('syncStatus');
+    if (el) el.textContent = txt;
+  }
+  function scheduleSync() {
+    if (syncTimer) clearTimeout(syncTimer);
+    syncTimer = setTimeout(syncNow, 1500);
+  }
+  function syncNow() {
+    if (syncInFlight) return;
+    syncInFlight = true;
+    setSyncStatus('☁ 同步中…');
+    fetch(SYNC_API + '?meta=false', { headers: { 'X-Access-Key': SYNC_ACCESS_KEY } })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function (remote) {
+        var remoteUpdatedAt = (remote && typeof remote.updatedAt === 'number') ? remote.updatedAt : 0;
+        var remoteCards = (remote && Array.isArray(remote.cards)) ? remote.cards : [];
+        var remoteRecords = (remote && Array.isArray(remote.records)) ? remote.records : [];
+        var hasRemote = remoteCards.length + remoteRecords.length > 0;
+        var hasLocal = state.cards.length + state.records.length > 0;
+        if (hasRemote && (!hasLocal || remoteUpdatedAt >= state.updatedAt)) {
+          state.cards = remoteCards;
+          state.records = remoteRecords;
+          state.updatedAt = remoteUpdatedAt;
+          lastLocalRaw = JSON.stringify({ cards: state.cards, records: state.records });
+          try { localStorage.setItem(LS_KEY, JSON.stringify({ cards: state.cards, records: state.records, updatedAt: state.updatedAt })); } catch (e) {}
+          renderAll();
+          setSyncStatus('☁ 已同步');
+          toast('已从云端同步最新数据');
+        } else if (hasLocal && (!hasRemote || state.updatedAt > remoteUpdatedAt)) {
+          return pushToCloud();
+        } else {
+          setSyncStatus('☁ 已同步');
+        }
+      })
+      .catch(function () {
+        setSyncStatus('⚠ 云同步失败');
+      })
+      .then(function () { syncInFlight = false; });
+  }
+  function pushToCloud() {
+    var payload = { cards: state.cards, records: state.records, updatedAt: state.updatedAt, app: 'wealth-manager' };
+    return fetch(SYNC_API, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Access-Key': SYNC_ACCESS_KEY },
+      body: JSON.stringify(payload)
+    }).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      setSyncStatus('☁ 已同步');
+      return true;
+    }).catch(function () {
+      setSyncStatus('⚠ 云同步失败');
+    });
   }
   // ---------- 计算逻辑 ----------
   function cardById(id) {
@@ -659,6 +736,7 @@
     initTheme();
     loadState();
     bindEvents();
+    scheduleSync();
     renderAll();
     window.addEventListener('resize', onResize);
   }

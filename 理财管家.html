@@ -222,7 +222,12 @@ footer{
 }
 footer a{color:var(--navy2);cursor:pointer;text-decoration:underline dotted;}
 .footer-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;}
-.sync-status{color:var(--txt3);font-size:11px;}
+.sync-status{color:var(--txt3);font-size:11px;cursor:pointer;border-bottom:1px dotted var(--txt3);}
+.card-page-nav{display:flex;align-items:center;gap:8px;margin-top:6px;}
+.card-page-nav .page-btn{padding:3px 12px;font-size:12px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--txt2);cursor:pointer;}
+.card-page-nav .page-btn:hover{background:var(--gold-soft);}
+.card-page-nav .page-btn:disabled{opacity:.4;cursor:not-allowed;}
+.card-page-nav .page-info{font-size:12px;color:var(--txt3);}
 
 /* SECTION: responsive */
 /* 平板适配 */
@@ -449,6 +454,11 @@ html[data-theme="dark"] footer a{color:var(--gold2);}
           <div class="field">
             <label for="inCard">选择银行卡</label>
             <select id="inCard" required></select>
+              <div class="card-page-nav" id="cardPageNav" style="display:none;">
+                <button type="button" class="page-btn" id="cardPagePrev">‹ 上一页</button>
+                <span class="page-info" id="cardPageInfo">1 / 1</span>
+                <button type="button" class="page-btn" id="cardPageNext">下一页 ›</button>
+              </div>
           </div>
           <div class="form-row">
             <div class="field">

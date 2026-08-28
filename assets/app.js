@@ -5,13 +5,33 @@
 
   var LS_KEY = 'wealth-manager-data-v3';
 
-  // ---------- 云同步配置（JSONBin 免费云存储） ----------
-  var SYNC_BIN_ID = '6a90f0c4f5f4af5e294c1ad9';
-  var SYNC_ACCESS_KEY = '$2a$10$51yQIx6RuRm1Je.Yz56CleDbP37d7kvJyWefUMkFA6nfC7H4R8gc.';
-  var SYNC_API = 'https://api.jsonbin.io/v3/b/' + SYNC_BIN_ID;
+  // ---------- 云同步配置（GitHub 私有仓库） ----------
+  // 同步密钥不写在代码里（避免泄露），由你在页面第一次使用时粘贴保存到本浏览器
+  var SYNC_OWNER = 'lingongzhe';
+  var SYNC_REPO = 'wealth-manager-data';
+  var SYNC_PATH = 'data.json';
+  var SYNC_TOKEN_KEY = 'wealth-manager-sync-token';
+  var SYNC_API = 'https://api.github.com/repos/' + SYNC_OWNER + '/' + SYNC_REPO + '/contents/' + SYNC_PATH;
   var syncTimer = null;
   var syncInFlight = false;
   var lastLocalRaw = '';
+  function getSyncToken() {
+    try { return localStorage.getItem(SYNC_TOKEN_KEY) || ''; } catch (e) { return ''; }
+  }
+  function requireSyncToken() {
+    var t = getSyncToken();
+    if (t) return t;
+    var input = prompt('首次使用云同步，请粘贴你的 GitHub 同步密钥（token，就是你创建的那个同步密钥）：');
+    if (input && input.trim()) {
+      try { localStorage.setItem(SYNC_TOKEN_KEY, input.trim()); } catch (e) {}
+      toast('云同步密钥已保存');
+      return getSyncToken();
+    }
+    return '';
+  }
+  var CARD_PAGE_SIZE = 10;          // 银行卡下拉框每页显示数量
+  var cardPage = 0;                 // 下拉框当前页
+  var CARD_LAST_KEY = 'wealth-manager-last-card';  // 记住上次选择的银行卡
   var $ = function (id) { return document.getElementById(id); };
 
   // ---------- 主题（跟随系统 / 浅色 / 深色） ----------
@@ -195,7 +215,7 @@
     reader.readAsText(file);
   }
 
-  // ---------- 云同步（JSONBin 免费云存储，自动同步电脑/手机数据） ----------
+  // ---------- 云同步（GitHub 私有仓库，自动同步电脑/手机数据） ----------
   function setSyncStatus(txt) {
     var el = document.getElementById('syncStatus');
     if (el) el.textContent = txt;
@@ -204,20 +224,37 @@
     if (syncTimer) clearTimeout(syncTimer);
     syncTimer = setTimeout(syncNow, 1500);
   }
+  function b64Encode(str) {
+    try { return btoa(unescape(encodeURIComponent(str))); } catch (e) { return btoa(str); }
+  }
+  function b64Decode(b64) {
+    try { return decodeURIComponent(escape(atob(b64))); } catch (e) { return atob(b64); }
+  }
   function syncNow() {
     if (syncInFlight) return;
+    var tk = getSyncToken();
+    if (!tk) {
+      setSyncStatus('☁ 点击配置云同步');
+      return;
+    }
     syncInFlight = true;
     setSyncStatus('☁ 同步中…');
-    fetch(SYNC_API + '?meta=false', { headers: { 'X-Access-Key': SYNC_ACCESS_KEY } })
+    fetch(SYNC_API, { headers: { 'Authorization': 'Bearer ' + tk, 'Accept': 'application/vnd.github+json' } })
       .then(function (res) {
+        if (res.status === 404) return { notFound: true };
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return res.json();
       })
-      .then(function (remote) {
+      .then(function (remoteFile) {
+        var sha = null, remote = null;
+        if (remoteFile && !remoteFile.notFound) {
+          sha = remoteFile.sha || null;
+          try { remote = JSON.parse(b64Decode(remoteFile.content)); } catch (e) { remote = null; }
+        }
         var remoteUpdatedAt = (remote && typeof remote.updatedAt === 'number') ? remote.updatedAt : 0;
         var remoteCards = (remote && Array.isArray(remote.cards)) ? remote.cards : [];
         var remoteRecords = (remote && Array.isArray(remote.records)) ? remote.records : [];
-        var hasRemote = remoteCards.length + remoteRecords.length > 0;
+        var hasRemote = remote !== null;
         var hasLocal = state.cards.length + state.records.length > 0;
         if (hasRemote && (!hasLocal || remoteUpdatedAt >= state.updatedAt)) {
           state.cards = remoteCards;
@@ -229,7 +266,7 @@
           setSyncStatus('☁ 已同步');
           toast('已从云端同步最新数据');
         } else if (hasLocal && (!hasRemote || state.updatedAt > remoteUpdatedAt)) {
-          return pushToCloud();
+          return pushToCloud(sha);
         } else {
           setSyncStatus('☁ 已同步');
         }
@@ -239,12 +276,19 @@
       })
       .then(function () { syncInFlight = false; });
   }
-  function pushToCloud() {
+  function pushToCloud(existingSha) {
+    var tk = getSyncToken();
+    if (!tk) { setSyncStatus('☁ 点击配置云同步'); return Promise.resolve(); }
     var payload = { cards: state.cards, records: state.records, updatedAt: state.updatedAt, app: 'wealth-manager' };
+    var body = {
+      message: 'auto sync ' + new Date().toISOString(),
+      content: b64Encode(JSON.stringify(payload))
+    };
+    if (existingSha) body.sha = existingSha;
     return fetch(SYNC_API, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'X-Access-Key': SYNC_ACCESS_KEY },
-      body: JSON.stringify(payload)
+      headers: { 'Authorization': 'Bearer ' + tk, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
     }).then(function (res) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       setSyncStatus('☁ 已同步');
@@ -253,6 +297,7 @@
       setSyncStatus('⚠ 云同步失败');
     });
   }
+
   // ---------- 计算逻辑 ----------
   function cardById(id) {
     for (var i = 0; i < state.cards.length; i++) if (state.cards[i].id === id) return state.cards[i];
@@ -592,14 +637,47 @@
       opt.value = ''; opt.textContent = '请先添加银行卡';
       sel.appendChild(opt);
       sel.disabled = true;
+      var nav0 = $('cardPageNav');
+      if (nav0) nav0.style.display = 'none';
       return;
     }
     sel.disabled = false;
-    state.cards.forEach(function (c) {
+    var total = state.cards.length;
+    var pageCount = Math.max(1, Math.ceil(total / CARD_PAGE_SIZE));
+    if (cardPage >= pageCount) cardPage = pageCount - 1;
+    var start = cardPage * CARD_PAGE_SIZE;
+    var pageCards = state.cards.slice(start, start + CARD_PAGE_SIZE);
+    pageCards.forEach(function (c) {
       var opt = document.createElement('option');
       opt.value = c.id; opt.textContent = c.name + '（¥' + fmtMoney(c.principal) + '）';
       sel.appendChild(opt);
     });
+    // 分页导航
+    var nav = $('cardPageNav');
+    if (nav) {
+      if (pageCount > 1) {
+        nav.style.display = 'flex';
+        $('cardPageInfo').textContent = (cardPage + 1) + ' / ' + pageCount;
+        $('cardPagePrev').disabled = cardPage === 0;
+        $('cardPageNext').disabled = cardPage >= pageCount - 1;
+      } else {
+        nav.style.display = 'none';
+      }
+    }
+    // 记住上次选择的银行卡（需求：提交后不要回到第一个）
+    var lastId = '';
+    try { lastId = localStorage.getItem(CARD_LAST_KEY) || ''; } catch (e) {}
+    if (lastId && cardById(lastId)) {
+      var idx = state.cards.findIndex(function (c) { return c.id === lastId; });
+      if (idx >= 0) {
+        var needPage = Math.floor(idx / CARD_PAGE_SIZE);
+        if (needPage !== cardPage) {
+          cardPage = needPage;
+          return renderCardSelect();
+        }
+      }
+      sel.value = lastId;
+    }
   }
 
   function renderAll() {
@@ -679,6 +757,7 @@
         state.records.push({ id: uid(), cardId: cardId, month: month, amount: amount, principalSnapshot: snapshot });
         toast('已保存 ' + monthLabel(month) + ' 的收益');
       }
+      try { localStorage.setItem(CARD_LAST_KEY, cardId); } catch (e2) {}
       saveState(); $('inAmount').value = ''; renderAll();
     });
 
@@ -693,6 +772,29 @@
         state.records = state.records.filter(function (r) { return r.id !== rid; });
         saveState(); renderAll();
         toast('已删除收益记录');
+      }
+    });
+
+    // 记住手动选择的银行卡
+    $('inCard').addEventListener('change', function () {
+      try { localStorage.setItem(CARD_LAST_KEY, this.value); } catch (e3) {}
+    });
+    // 银行卡下拉框分页
+    var pv = $('cardPagePrev'), nx = $('cardPageNext');
+    if (pv) pv.addEventListener('click', function () {
+      if (cardPage > 0) { cardPage--; renderCardSelect(); }
+    });
+    if (nx) nx.addEventListener('click', function () {
+      var pc = Math.max(1, Math.ceil(state.cards.length / CARD_PAGE_SIZE));
+      if (cardPage < pc - 1) { cardPage++; renderCardSelect(); }
+    });
+
+    // 点击同步状态可配置云同步
+    var stEl = $('syncStatus');
+    if (stEl) stEl.addEventListener('click', function () {
+      if (!getSyncToken()) {
+        requireSyncToken();
+        scheduleSync();
       }
     });
 

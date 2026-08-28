@@ -2,3 +2,6 @@
 history/
 # 应用构建器
 .apps-builder/
+
+# 本地数据备份（含隐私，不推送）
+_backup/

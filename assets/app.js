@@ -139,6 +139,15 @@
     for (var i = 0; i < state.cards.length; i++) if (state.cards[i].id === id) return state.cards[i];
     return null;
   }
+  // 取某条收益记录对应的本金：优先使用保存时的本金快照，
+  // 旧记录（无快照）回退到该卡当前本金，保证向后兼容
+  function recordPrincipal(r) {
+    if (typeof r.principalSnapshot === 'number' && r.principalSnapshot >= 0) {
+      return r.principalSnapshot;
+    }
+    var c = cardById(r.cardId);
+    return c ? c.principal : 0;
+  }
   function recordsOf(scope) {
     if (scope === 'all') return state.records.slice();
     return state.records.filter(function (r) { return r.cardId === scope; });
@@ -152,8 +161,7 @@
       byMonth[r.month].income += r.amount;
       if (!byMonth[r.month].seen[r.cardId]) {
         byMonth[r.month].seen[r.cardId] = true;
-        var c = cardById(r.cardId);
-        if (c) byMonth[r.month].principal += c.principal;
+        byMonth[r.month].principal += recordPrincipal(r);
       }
     });
     var months = Object.keys(byMonth).sort();
@@ -187,9 +195,9 @@
     var recs = state.records.filter(function (r) { return r.cardId === cardId; });
     if (!recs.length) return null;
     recs.sort(function (a, b) { return a.month < b.month ? 1 : -1; });
-    var c = cardById(cardId);
-    if (!c || c.principal <= 0) return null;
-    return recs[0].amount / c.principal * 100;
+    var p = recordPrincipal(recs[0]);
+    if (p <= 0) return null;
+    return recs[0].amount / p * 100;
   }
 
   // ---------- 渲染：总览 ----------
@@ -258,7 +266,7 @@
     $('detailCount').textContent = recs.length ? '共 ' + recs.length + ' 条' : '';
     recs.forEach(function (r) {
       var c = cardById(r.cardId);
-      var principal = c ? c.principal : 0;
+      var principal = recordPrincipal(r);
       var rate = principal > 0 ? r.amount / principal * 100 : 0;
       var tr = document.createElement('tr');
       tr.innerHTML =
@@ -541,12 +549,15 @@
       if (!month) { toast('请选择收益月份'); return; }
       if (isNaN(amount) || amount === 0) { toast('请填写有效的收益金额（可负数表示亏损）'); return; }
       var existed = state.records.find(function (r) { return r.cardId === cardId && r.month === month; });
+      var card = cardById(cardId);
+      var snapshot = card ? card.principal : 0;
       if (existed) {
         if (!confirm(monthLabel(month) + ' 已有该卡的收益记录（' + fmtMoney(existed.amount) + ' 元），是否覆盖？')) return;
         existed.amount = amount;
+        existed.principalSnapshot = snapshot; // 同步更新本金快照
         toast('已更新 ' + monthLabel(month) + ' 的收益');
       } else {
-        state.records.push({ id: uid(), cardId: cardId, month: month, amount: amount });
+        state.records.push({ id: uid(), cardId: cardId, month: month, amount: amount, principalSnapshot: snapshot });
         toast('已保存 ' + monthLabel(month) + ' 的收益');
       }
       saveState(); $('inAmount').value = ''; renderAll();

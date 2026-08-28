@@ -221,6 +221,7 @@ footer{
   color:var(--txt3);font-size:12px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;
 }
 footer a{color:var(--navy2);cursor:pointer;text-decoration:underline dotted;}
+.footer-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;}
 
 /* SECTION: responsive */
 /* 平板适配 */
@@ -500,7 +501,12 @@ html[data-theme="dark"] footer a{color:var(--gold2);}
 <!-- SECTION: footer -->
 <footer>
   <span>数据保存在当前浏览器本地，清除浏览器数据前请注意备份。</span>
-  <a id="resetSeed">清空全部数据</a>
+  <div class="footer-actions">
+    <button type="button" class="btn btn-ghost btn-sm" id="btnExport">⬇ 导出备份</button>
+    <button type="button" class="btn btn-ghost btn-sm" id="btnImport">⬆ 导入恢复</button>
+    <a id="resetSeed">清空全部数据</a>
+  </div>
+  <input type="file" id="importFile" accept=".json,application/json" style="display:none">
 </footer>
 
 <!-- SECTION: card modal -->

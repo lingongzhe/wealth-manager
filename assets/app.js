@@ -134,6 +134,48 @@
     }
   }
 
+  // ---------- 导出 / 导入备份（跨设备迁移数据） ----------
+  function doExport() {
+    var data = {
+      app: 'wealth-manager',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      cards: state.cards,
+      records: state.records
+    };
+    var text = JSON.stringify(data, null, 2);
+    var blob = new Blob([text], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = '理财管家备份_' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    toast('已导出备份文件');
+  }
+
+  function doImport(file) {
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      try {
+        var obj = JSON.parse(e.target.result);
+        var cards = obj && Array.isArray(obj.cards) ? obj.cards : null;
+        var records = Array.isArray(obj.records) ? obj.records : [];
+        if (!cards) { toast('备份文件格式不对：未找到卡片数据'); return; }
+        if (!confirm('导入将覆盖当前全部数据（共 ' + cards.length + ' 张卡、' + records.length + ' 条记录），确定继续吗？')) return;
+        state.cards = cards;
+        state.records = records;
+        state.scope = 'all';
+        saveState(); renderAll();
+        toast('导入成功！');
+      } catch (err) {
+        toast('导入失败：文件格式不正确');
+      }
+    };
+    reader.readAsText(file);
+  }
   // ---------- 计算逻辑 ----------
   function cardById(id) {
     for (var i = 0; i < state.cards.length; i++) if (state.cards[i].id === id) return state.cards[i];
@@ -593,7 +635,14 @@
         toast('已清空全部数据');
       }
     });
-  }
+
+    // 导出 / 导入备份
+    $('btnExport').addEventListener('click', doExport);
+    $('btnImport').addEventListener('click', function () { $('importFile').click(); });
+    $('importFile').addEventListener('change', function () {
+      if (this.files && this.files[0]) doImport(this.files[0]);
+      this.value = '';
+    });  }
 
   // ---------- 初始化 ----------
   var resizeTimer = null;

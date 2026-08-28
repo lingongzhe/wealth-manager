@@ -32,6 +32,8 @@
   var CARD_PAGE_SIZE = 10;          // 银行卡下拉框每页显示数量
   var cardPage = 0;                 // 下拉框当前页
   var CARD_LAST_KEY = 'wealth-manager-last-card';  // 记住上次选择的银行卡
+  var DETAIL_PAGE_SIZE = 10;   // 收益明细每页显示行数
+  var detailPage = 0;          // 收益明细当前页
   var $ = function (id) { return document.getElementById(id); };
 
   // ---------- 主题（跟随系统 / 浅色 / 深色） ----------
@@ -428,7 +430,13 @@
     body.innerHTML = '';
     $('detailEmpty').style.display = recs.length ? 'none' : 'block';
     $('detailCount').textContent = recs.length ? '共 ' + recs.length + ' 条' : '';
-    recs.forEach(function (r) {
+    // 分页：每页 DETAIL_PAGE_SIZE 行
+    var nav2 = $('detailPageNav');
+    var totalPages = Math.max(1, Math.ceil(recs.length / DETAIL_PAGE_SIZE));
+    if (detailPage >= totalPages) detailPage = totalPages - 1;
+    var start = detailPage * DETAIL_PAGE_SIZE;
+    var pageRecs = recs.slice(start, start + DETAIL_PAGE_SIZE);
+    pageRecs.forEach(function (r) {
       var c = cardById(r.cardId);
       var principal = recordPrincipal(r);
       var rate = principal > 0 ? r.amount / principal * 100 : 0;
@@ -442,6 +450,16 @@
         '<td><button class="icon-btn danger" data-delrec="' + r.id + '" title="删除记录">✕</button></td>';
       body.appendChild(tr);
     });
+    if (nav2) {
+      if (recs.length > DETAIL_PAGE_SIZE) {
+        nav2.style.display = 'flex';
+        $('detailPageInfo').textContent = (detailPage + 1) + ' / ' + totalPages;
+        $('detailPagePrev').disabled = detailPage === 0;
+        $('detailPageNext').disabled = detailPage >= totalPages - 1;
+      } else {
+        nav2.style.display = 'none';
+      }
+    }
   }
 
   // ---------- 渲染：范围选择 ----------
@@ -796,6 +814,16 @@
         requireSyncToken();
         scheduleSync();
       }
+    });
+
+    // 收益明细分页
+    var dpv = $('detailPagePrev'), dnx = $('detailPageNext');
+    if (dpv) dpv.addEventListener('click', function () {
+      if (detailPage > 0) { detailPage--; renderDetail(); }
+    });
+    if (dnx) dnx.addEventListener('click', function () {
+      var tp = Math.max(1, Math.ceil(state.records.length / DETAIL_PAGE_SIZE));
+      if (detailPage < tp - 1) { detailPage++; renderDetail(); }
     });
 
     // 图表范围切换

@@ -228,6 +228,11 @@ footer a{color:var(--navy2);cursor:pointer;text-decoration:underline dotted;}
 .card-page-nav .page-btn:hover{background:var(--gold-soft);}
 .card-page-nav .page-btn:disabled{opacity:.4;cursor:not-allowed;}
 .card-page-nav .page-info{font-size:12px;color:var(--txt3);}
+.detail-page-nav{display:flex;align-items:center;gap:8px;margin-top:10px;justify-content:center;}
+.detail-page-nav .page-btn{padding:4px 14px;font-size:12px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--txt2);cursor:pointer;}
+.detail-page-nav .page-btn:hover{background:var(--gold-soft);}
+.detail-page-nav .page-btn:disabled{opacity:.4;cursor:not-allowed;}
+.detail-page-nav .page-info{font-size:12px;color:var(--txt3);}
 
 /* SECTION: responsive */
 /* 平板适配 */
@@ -503,7 +508,12 @@ html[data-theme="dark"] footer a{color:var(--gold2);}
             <tbody id="detailBody"></tbody>
           </table>
         </div>
-        <div class="empty-tip" id="detailEmpty" style="display:none;">暂无收益记录，请先在左侧录入某张卡某个月的收益。</div>
+        <div class="detail-page-nav" id="detailPageNav" style="display:none;">
+        <button type="button" class="page-btn" id="detailPagePrev">‹ 上一页</button>
+        <span class="page-info" id="detailPageInfo">1 / 1</span>
+        <button type="button" class="page-btn" id="detailPageNext">下一页 ›</button>
+      </div>
+      <div class="empty-tip" id="detailEmpty" style="display:none;">暂无收益记录，请先在左侧录入某张卡某个月的收益。</div>
       </section>
     </div>
   </div>

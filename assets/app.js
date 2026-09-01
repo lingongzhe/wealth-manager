@@ -37,10 +37,10 @@
   var detailScope = 'all';    // 收益明细筛选（all / 卡id）
   var $ = function (id) { return document.getElementById(id); };
 
-  // ---------- 主题（跟随系统 / 浅色 / 深色） ----------
+  // ---------- 主题（浅色 / 深色） ----------
   var THEME_KEY = 'wealth-manager-theme';
-  var THEME_MODES = ['auto', 'light', 'dark'];
-  var THEME_LABELS = { auto: '跟随系统', light: '浅色', dark: '深色' };
+  var THEME_MODES = ['light', 'dark'];
+  var THEME_LABELS = { light: '浅色', dark: '深色' };
 
   function systemPrefersDark() {
     return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -48,14 +48,12 @@
   function getSavedMode() {
     try {
       var m = localStorage.getItem(THEME_KEY);
-      return THEME_MODES.indexOf(m) >= 0 ? m : 'auto';
-    } catch (e) { return 'auto'; }
+      return THEME_MODES.indexOf(m) >= 0 ? m : 'light';
+    } catch (e) { return 'light'; }
   }
   // mode 解析为实际渲染主题
   function resolveTheme(mode) {
-    if (mode === 'dark') return 'dark';
-    if (mode === 'light') return 'light';
-    return systemPrefersDark() ? 'dark' : 'light'; // auto
+    return mode === 'dark' ? 'dark' : 'light';
   }
   function isDark() { return document.documentElement.getAttribute('data-theme') === 'dark'; }
   function chartColors() {
@@ -75,16 +73,6 @@
   }
   function initTheme() {
     applyMode(getSavedMode());
-
-    // 系统主题变化时，若处于跟随系统模式则实时同步
-    if (window.matchMedia) {
-      var mq = window.matchMedia('(prefers-color-scheme: dark)');
-      var onChange = function () {
-        if (getSavedMode() === 'auto') { applyMode('auto'); renderChart(); }
-      };
-      if (mq.addEventListener) mq.addEventListener('change', onChange);
-      else if (mq.addListener) mq.addListener(onChange);
-    }
 
     var btn = $('themeToggle');
     if (btn) btn.addEventListener('click', function () {

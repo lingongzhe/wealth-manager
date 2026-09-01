@@ -9,18 +9,14 @@
 <script>
 /* SECTION: theme-bootstrap */
 (function () {
-  var mode = 'auto';
+  var saved = 'light';
   try {
-    var saved = localStorage.getItem('wealth-manager-theme');
-    if (saved === 'auto' || saved === 'light' || saved === 'dark') mode = saved;
+    var s = localStorage.getItem('wealth-manager-theme');
+    if (s === 'light' || s === 'dark') saved = s;
   } catch (e) {}
-  var theme = mode;
-  if (mode === 'auto') {
-    theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
-  }
-  if (theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
   else document.documentElement.removeAttribute('data-theme');
-  document.documentElement.setAttribute('data-theme-mode', mode);
+  document.documentElement.setAttribute('data-theme-mode', saved);
 })();
 </script>
 <style>
@@ -68,16 +64,10 @@ header{
   border-radius:20px;padding:7px 14px;font-size:13px;font-weight:600;transition:all .18s;
 }
 .theme-btn:hover{background:rgba(255,255,255,.22);}
-/* 三态图标：默认只显示跟随系统图标 */
-.theme-btn .icon-auto,
+/* 两态图标：浅色显示太阳，深色显示月亮 */
 .theme-btn .icon-sun,
 .theme-btn .icon-moon{display:none;}
-.theme-btn .icon-auto{display:inline-block;}
-/* 浅色模式：显示太阳图标 */
-html[data-theme-mode="light"] .theme-btn .icon-auto{display:none;}
 html[data-theme-mode="light"] .theme-btn .icon-sun{display:inline-block;}
-/* 深色模式：显示月亮图标 */
-html[data-theme-mode="dark"] .theme-btn .icon-auto{display:none;}
 html[data-theme-mode="dark"] .theme-btn .icon-moon{display:inline-block;}
 
 /* SECTION: layout */
@@ -399,11 +389,7 @@ html[data-theme="dark"] footer a{color:var(--gold2);}
     </div>
     <div class="head-right">
       <div class="head-date" id="headDate"></div>
-      <button class="theme-btn" id="themeToggle" title="切换皮肤：跟随系统 / 浅色 / 深色">
-        <svg class="icon-auto" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
-          <path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/>
-        </svg>
+      <button class="theme-btn" id="themeToggle" title="切换：浅色 / 深色">
         <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"/>
           <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -411,7 +397,7 @@ html[data-theme="dark"] footer a{color:var(--gold2);}
         <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M20 13.5A8.5 8.5 0 0 1 10.5 4 8.5 8.5 0 1 0 20 13.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
         </svg>
-        <span id="themeLabel">跟随系统</span>
+        <span id="themeLabel">浅色</span>
       </button>
     </div>
   </div>

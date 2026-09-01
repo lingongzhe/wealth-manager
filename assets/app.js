@@ -34,6 +34,7 @@
   var CARD_LAST_KEY = 'wealth-manager-last-card';  // 记住上次选择的银行卡
   var DETAIL_PAGE_SIZE = 10;   // 收益明细每页显示行数
   var detailPage = 0;          // 收益明细当前页
+  var detailScope = 'all';    // 收益明细筛选（all / 卡id）
   var $ = function (id) { return document.getElementById(id); };
 
   // ---------- 主题（跟随系统 / 浅色 / 深色） ----------
@@ -383,6 +384,15 @@
 
     var fc = forecastAnnualized(md);
     $('statForecast').textContent = fc === null ? '--' : fmtRate(fc);
+
+    // 本年度收益（截至当前月份，跟随范围筛选）
+    var nowY = '' + new Date().getFullYear();
+    var yearRecs = recordsOf(state.scope).filter(function (r) { return r.month.slice(0, 4) === nowY; });
+    var yearIncome = yearRecs.reduce(function (s, r) { return s + r.amount; }, 0);
+    $('statYear').textContent = (yearIncome >= 0 ? '+¥' : '-¥') + fmtMoney(Math.abs(yearIncome));
+    var sc = cardById(state.scope);
+    var scopeNm = (state.scope === 'all' || !sc) ? '全部卡片' : sc.name;
+    $('statYearHint').textContent = nowY + '年 · ' + scopeNm + ' · ' + yearRecs.length + ' 笔';
   }
 
   // ---------- 渲染：银行卡列表 ----------
@@ -424,7 +434,7 @@
   // ---------- 渲染：收益明细 ----------
   function renderDetail() {
     var body = $('detailBody');
-    var recs = state.records.slice().sort(function (a, b) {
+    var recs = recordsOf(detailScope).slice().sort(function (a, b) {
       return a.month === b.month ? 0 : (a.month < b.month ? 1 : -1);
     });
     body.innerHTML = '';
@@ -460,6 +470,127 @@
         nav2.style.display = 'none';
       }
     }
+  }
+
+  // ---------- 计算：每月理财总金额（历史走势） ----------
+  function nextMonthKey(m) {
+    var y = parseInt(m.slice(0, 4), 10), mo = parseInt(m.slice(5, 7), 10);
+    if (mo === 12) { y++; mo = 1; } else { mo++; }
+    var mm = mo < 10 ? '0' + mo : '' + mo;
+    return y + '-' + mm;
+  }
+  function monthlyPrincipal(scope) {
+    var cards = state.cards.filter(function (c) { return scope === 'all' || c.id === scope; });
+    var recs = recordsOf(scope);
+    var snapByCard = {};
+    cards.forEach(function (c) { snapByCard[c.id] = {}; });
+    recs.forEach(function (r) {
+      if (!snapByCard[r.cardId]) snapByCard[r.cardId] = {};
+      snapByCard[r.cardId][r.month] = recordPrincipal(r);
+    });
+    var allKeys = recs.map(function (r) { return r.month; });
+    var end = monthKey(new Date());
+    var start = allKeys.length ? allKeys.slice().sort()[0] : end;
+    if (start > end) return [];
+    var months = [];
+    var cur = start;
+    while (cur <= end) {
+      var total = 0;
+      cards.forEach(function (c) {
+        var snap = snapByCard[c.id];
+        var best = null;
+        for (var m in snap) { if (m <= cur && (best === null || m > best)) best = m; }
+        total += (best !== null) ? snap[best] : (typeof c.principal === 'number' ? c.principal : 0);
+      });
+      months.push({ month: cur, principal: total });
+      cur = nextMonthKey(cur);
+    }
+    return months;
+  }
+
+  function fmtShort(v) {
+    if (v >= 10000) { var w = v / 10000; return (Math.round(w * 10) / 10) + '万'; }
+    return '' + Math.round(v);
+  }
+  function renderDetailScopeSelect() {
+    var sel = $('detailScope');
+    if (!sel) return;
+    var prev = detailScope;
+    sel.innerHTML = '<option value="all">全部银行卡</option>';
+    state.cards.forEach(function (c) {
+      var o = document.createElement('option');
+      o.value = c.id; o.textContent = c.name;
+      sel.appendChild(o);
+    });
+    if (prev === 'all' || cardById(prev)) sel.value = prev;
+    else { sel.value = 'all'; detailScope = 'all'; }
+  }
+  function renderPrincipalChart() {
+    var svg = $('principalSvg');
+    var empty = $('principalEmpty');
+    if (!svg) return;
+    var data = monthlyPrincipal(state.scope);
+    svg.innerHTML = '';
+    if (!data.length) {
+      svg.style.display = 'none';
+      if (empty) { empty.style.display = 'block'; empty.innerHTML = '暂无收益记录，录入后这里会展示每月理财总金额走势。'; }
+      return;
+    }
+    svg.style.display = 'block';
+    if (empty) empty.style.display = 'none';
+
+    var W, H, mL, mR, mT, mB;
+    if (window.innerWidth <= 560) { W = 400; H = 260; mL = 52; mR = 12; mT = 22; mB = 40; }
+    else { W = 800; H = 300; mL = 62; mR = 18; mT = 26; mB = 46; }
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    var plotW = W - mL - mR, plotH = H - mT - mB;
+    var cc = chartColors();
+
+    var maxP = Math.max.apply(null, data.map(function (d) { return +d.principal; }));
+    if (!(maxP > 0)) maxP = 1;
+    var gridN = 4;
+    for (var g = 0; g <= gridN; g++) {
+      var val = maxP * g / gridN;
+      var gy = mT + plotH * (1 - g / gridN);
+      var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', mL); line.setAttribute('x2', W - mR);
+      line.setAttribute('y1', gy); line.setAttribute('y2', gy);
+      line.setAttribute('stroke', cc.grid); line.setAttribute('stroke-width', 1);
+      if (g !== 0) line.setAttribute('stroke-dasharray', '4 4');
+      svg.appendChild(line);
+      var t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      t.setAttribute('x', mL - 6); t.setAttribute('y', gy + 4);
+      t.setAttribute('text-anchor', 'end'); t.setAttribute('fill', cc.label); t.setAttribute('font-size', 11);
+      t.textContent = fmtShort(val);
+      svg.appendChild(t);
+    }
+
+    var n = data.length;
+    var slot = plotW / n;
+    var bw = Math.min(slot * 0.62, 46);
+    var step = n > 30 ? 4 : (n > 16 ? 2 : 1);
+    data.forEach(function (d, i) {
+      var barH = plotH * (+d.principal / maxP);
+      var x = mL + slot * i + (slot - bw) / 2;
+      var by = mT + plotH - barH;
+      var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('x', x); rect.setAttribute('y', by);
+      rect.setAttribute('width', bw); rect.setAttribute('height', Math.max(barH, 1));
+      rect.setAttribute('rx', 3); rect.setAttribute('fill', '#d4a94e'); rect.setAttribute('opacity', .9);
+      svg.appendChild(rect);
+      if (i % step === 0) {
+        var tv = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        tv.setAttribute('x', x + bw / 2); tv.setAttribute('y', by - 5);
+        tv.setAttribute('text-anchor', 'middle'); tv.setAttribute('fill', cc.label); tv.setAttribute('font-size', 10);
+        tv.textContent = fmtShort(d.principal);
+        svg.appendChild(tv);
+        var mlb = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        mlb.setAttribute('x', x + bw / 2); mlb.setAttribute('y', H - mB + 16);
+        mlb.setAttribute('text-anchor', 'middle'); mlb.setAttribute('fill', cc.label); mlb.setAttribute('font-size', 10);
+        mlb.textContent = d.month.slice(2);
+        svg.appendChild(mlb);
+      }
+    });
   }
 
   // ---------- 渲染：范围选择 ----------
@@ -703,8 +834,10 @@
     renderCards();
     renderCardSelect();
     renderScopeSelect();
+    renderDetailScopeSelect();
     renderDetail();
     renderChart();
+    renderPrincipalChart();
   }
 
   function bindEvents() {
@@ -826,9 +959,19 @@
       if (detailPage < tp - 1) { detailPage++; renderDetail(); }
     });
 
-    // 图表范围切换
+    // 收益明细筛选切换
+    var dsc = $('detailScope');
+    if (dsc) dsc.addEventListener('change', function () {
+      detailScope = this.value;
+      detailPage = 0;
+      renderDetail();
+    });
+
+    // 图表范围切换（联动：统计 + 金额走势 + 收益率趋势）
     $('chartScope').addEventListener('change', function () {
       state.scope = this.value;
+      renderStats();
+      renderPrincipalChart();
       renderChart();
     });
 

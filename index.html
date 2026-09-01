@@ -86,7 +86,7 @@ main{max-width:1180px;margin:0 auto;width:100%;padding:22px 24px 10px;flex:1;}
 .col{display:flex;flex-direction:column;gap:18px;min-width:0;}
 
 /* SECTION: stats */
-.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:14px;margin-bottom:18px;}
 .stat-card{
   background:var(--card);border-radius:var(--radius);padding:16px 18px;
   box-shadow:var(--shadow);border-top:3px solid var(--navy2);position:relative;overflow:hidden;
@@ -440,6 +440,11 @@ html[data-theme="dark"] footer a{color:var(--gold2);}
       <div class="value" id="statForecast">--</div>
       <div class="hint">按月度收益趋势线性外推至全年</div>
     </div>
+    <div class="stat-card gold">
+      <div class="label"><span class="dot g"></span>本年度收益（截至本月）</div>
+      <div class="value" id="statYear">--</div>
+      <div class="hint" id="statYearHint">当年已记录收益合计 · 全部卡片</div>
+    </div>
   </section>
 
   <div class="layout">
@@ -499,7 +504,7 @@ html[data-theme="dark"] footer a{color:var(--gold2);}
       </section>
 
       <section class="panel" aria-label="收益明细">
-        <div class="panel-head"><h2>收益明细</h2><span style="font-size:12px;color:var(--txt3);" id="detailCount"></span></div>
+        <div class="panel-head"><h2>收益明细</h2><span style="font-size:12px;color:var(--txt3);" id="detailCount"></span><select class="scope-select" id="detailScope" aria-label="筛选银行卡"></select></div>
         <div class="table-wrap">
           <table class="detail">
             <thead>
@@ -514,6 +519,14 @@ html[data-theme="dark"] footer a{color:var(--gold2);}
         <button type="button" class="page-btn" id="detailPageNext">下一页 ›</button>
       </div>
       <div class="empty-tip" id="detailEmpty" style="display:none;">暂无收益记录，请先在左侧录入某张卡某个月的收益。</div>
+      </section>
+
+      <section class="panel" aria-label="理财总金额走势">
+        <div class="panel-head"><h2>理财总金额走势</h2><span style="font-size:12px;color:var(--txt3);">跟随上方「收益率趋势」范围筛选 · 无记录月沿用上月</span></div>
+        <div class="chart-wrap">
+          <svg id="principalSvg" viewBox="0 0 800 300" role="img" aria-label="每月理财总金额柱状图"></svg>
+          <div class="chart-empty" id="principalEmpty" style="display:none;"></div>
+        </div>
       </section>
     </div>
   </div>

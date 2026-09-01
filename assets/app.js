@@ -35,6 +35,7 @@
   var DETAIL_PAGE_SIZE = 10;   // 收益明细每页显示行数
   var detailPage = 0;          // 收益明细当前页
   var detailScope = 'all';    // 收益明细筛选（all / 卡id）
+  var principalScope = 'all'; // 理财总金额走势筛选（all / 卡id）
   var $ = function (id) { return document.getElementById(id); };
 
   // ---------- 主题（浅色 / 深色） ----------
@@ -517,7 +518,7 @@
     var svg = $('principalSvg');
     var empty = $('principalEmpty');
     if (!svg) return;
-    var data = monthlyPrincipal(state.scope);
+    var data = monthlyPrincipal(principalScope);
     svg.innerHTML = '';
     if (!data.length) {
       svg.style.display = 'none';
@@ -594,6 +595,22 @@
     });
     if (prev === 'all' || cardById(prev)) sel.value = prev;
     else { sel.value = 'all'; state.scope = 'all'; }
+  }
+
+  // ---------- 渲染：理财总金额走势范围选择 ----------
+  function renderPrincipalScopeSelect() {
+    var sel = $('principalScope');
+    if (!sel) return;
+    var prev = principalScope;
+    sel.innerHTML = '<option value="all">全部银行卡（汇总）</option>';
+    state.cards.forEach(function (c) {
+      var opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.name;
+      sel.appendChild(opt);
+    });
+    if (prev === 'all' || cardById(prev)) sel.value = prev;
+    else { sel.value = 'all'; principalScope = 'all'; }
   }
 
   // ---------- 渲染：折线图（SVG） ----------
@@ -823,6 +840,7 @@
     renderCardSelect();
     renderScopeSelect();
     renderDetailScopeSelect();
+    renderPrincipalScopeSelect();
     renderDetail();
     renderChart();
     renderPrincipalChart();
@@ -955,12 +973,18 @@
       renderDetail();
     });
 
-    // 图表范围切换（联动：统计 + 金额走势 + 收益率趋势）
+    // 图表范围切换（联动：统计 + 收益率趋势）
     $('chartScope').addEventListener('change', function () {
       state.scope = this.value;
       renderStats();
-      renderPrincipalChart();
       renderChart();
+    });
+
+    // 理财总金额走势范围切换
+    var psc = $('principalScope');
+    if (psc) psc.addEventListener('change', function () {
+      principalScope = this.value;
+      renderPrincipalChart();
     });
 
     // 清空全部数据
